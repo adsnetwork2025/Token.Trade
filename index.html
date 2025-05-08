@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dogs Trade</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+        }
+        .container {
+            text-align: center;
+            padding: 20px;
+            border: 2px solid #ddd;
+            background-color: white;
+            border-radius: 10px;
+        }
+        .circle {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            display: inline-block;
+            margin: 10px;
+            font-size: 24px;
+            line-height: 150px;
+            background-color: #4caf50;
+            color: white;
+        }
+        .button {
+            background-color: #4caf50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px;
+            margin: 10px;
+        }
+        .button:disabled {
+            background-color: #888;
+            cursor: not-allowed;
+        }
+        .account-number {
+            font-size: 24px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .timer {
+            font-size: 18px;
+            margin: 10px 0;
+        }
+        .form-container {
+            display: none;
+            margin-top: 20px;
+            text-align: center;
+        }
+        .form-container input {
+            padding: 10px;
+            margin: 5px;
+            font-size: 16px;
+        }
+        #receiveForm {
+            display: none;
+        }
+        #receiveAddress {
+            font-size: 18px;
+            margin: 10px;
+        }
+        #copyButton {
+            background-color: #ff9800;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="account-number" id="accountNumber">Token Trade</div>
+        <div class="circle" id="tokenCircle">Token: 0</div>
+        <div class="circle" id="coinCircle">Coins: 0</div>
+        <div class="timer" id="timer">Next Claim in: 10:00</div>
+        
+        <!-- Editable section for coins per minute, minimum tokens, and coins per token -->
+        <div class="form-container">
+            <h3>Edit Coin and Token Settings</h3>
+            <label for="coinsPerMinute">Coins Per Minute: </label>
+            <input type="number" id="coinsPerMinute" value="10" min="1" />
+            <br />
+            <label for="minTokensForSend">Minimum Tokens to Transfer: </label>
+            <input type="number" id="minTokensForSend" value="1" min="1" />
+            <br />
+            <label for="coinsPerToken">Coins Required for 1 Token: </label>
+            <input type="number" id="coinsPerToken" value="100" min="1" />
+            <br />
+            <button class="button" onclick="saveSettings()">Save Settings</button>
+        </div>
+
+        <button class="button" id="claimButton" onclick="claimBonus()">Claim Bonus</button>
+        <button class="button" id="sendButton" onclick="showSendForm()">Send</button>
+        <button class="button" id="receiveButton" onclick="showReceiveAddress()">Receive</button>
+        
+        <!-- Send Form -->
+        <div class="form-container" id="sendForm">
+            <h3>Send Token</h3>
+            <input type="number" id="sendTokenAmount" placeholder="Enter Token Amount" min="1" />
+            <input type="text" id="receiverAccountNumber" placeholder="Enter Receiver Account Number" />
+            <button class="button" onclick="sendToken()">Send Now</button>
+        </div>
+
+        <!-- Receive Address -->
+        <div class="form-container" id="receiveForm">
+            <h3>Your Receive Address:</h3>
+            <p id="receiveAddress">Account Number: 1234567890</p>
+            <button class="button" id="copyButton" onclick="copyAddress()">Copy Address</button>
+        </div>
+    </div>
+
+    <script>
+        // Get data from localStorage
+        let coins = parseInt(localStorage.getItem("coins")) || 0;
+        let tokens = parseInt(localStorage.getItem("tokens")) || 0;
+        let timeLeft = 600;  // 10 minutes in seconds
+        let coinsPerMinute = parseInt(localStorage.getItem("coinsPerMinute")) || 10; // Default to 10 coins
+        let minTokensForSend = parseInt(localStorage.getItem("minTokensForSend")) || 1; // Default to 1 token
+        let coinsPerToken = parseInt(localStorage.getItem("coinsPerToken")) || 100; // Default to 100 coins for 1 token
+
+        let claimButton = document.getElementById("claimButton");
+        let timerElement = document.getElementById("timer");
+
+        // Update the UI with the stored data
+        document.getElementById("coinCircle").textContent = `Coins: ${coins}`;
+        document.getElementById("tokenCircle").textContent = `Token: ${tokens}`;
+
+        // Start the timer countdown
+        let countdown = setInterval(function() {
+            timeLeft--;
+            let minutes = Math.floor(timeLeft / 60);
+            let seconds = timeLeft % 60;
+            timerElement.textContent = `Next Claim in: ${minutes}:${seconds < 10 ? '0' + seconds : seconds}`;
+
+            if (timeLeft <= 0) {
+                claimButton.disabled = false;
+                timerElement.textContent = "Claim Bonus Now!";
+            }
+        }, 1000);
+
+        function claimBonus() {
+            if (timeLeft <= 0) {
+                // Add coins when user clicks 'Claim Bonus'
+                coins += coinsPerMinute;
+                document.getElementById("coinCircle").textContent = `Coins: ${coins}`;
+
+                // If enough coins, convert to tokens
+                if (coins >= coinsPerToken) {
+                    let tokensEarned = Math.floor(coins / coinsPerToken);
+                    tokens += tokensEarned;
+                    coins -= tokensEarned * coinsPerToken;
+                    document.getElementById("tokenCircle").textContent = `Token: ${tokens}`;
+                    document.getElementById("coinCircle").textContent = `Coins: ${coins}`;
+                }
+
+                // Save the data in localStorage
+                localStorage.setItem("coins", coins);
+                localStorage.setItem("tokens", tokens);
+
+                // Reset timer
+                timeLeft = 600;  // 10 minutes
+                claimButton.disabled = true;
+            }
+        }
+
+        function showSendForm() {
+            document.getElementById("sendForm").style.display = "block";
+            document.getElementById("receiveForm").style.display = "none";
+        }
+
+        function showReceiveAddress() {
+            document.getElementById("receiveForm").style.display = "block";
+            document.getElementById("sendForm").style.display = "none";
+        }
+
+        function sendToken() {
+            let sendAmount = parseInt(document.getElementById("sendTokenAmount").value);
+            let receiverAccount = document.getElementById("receiverAccountNumber").value;
+            
+            if (sendAmount < minTokensForSend) {
+                alert(`You need at least ${minTokensForSend} token(s) to send.`);
+                return;
+            }
+            if (sendAmount > tokens) {
+                alert("Not enough tokens.");
+                return;
+            }
+            if (sendAmount <= 0 || !receiverAccount) {
+                alert("Please enter valid details.");
+                return;
+            }
+
+            // Subtract the tokens from the sender's account
+            tokens -= sendAmount;
+            document.getElementById("tokenCircle").textContent = `Token: ${tokens}`;
+
+            // Show success message and reset the form
+            alert(`Successfully sent ${sendAmount} token(s) to Account: ${receiverAccount}`);
+            document.getElementById("sendForm").reset();
+            document.getElementById("sendForm").style.display = "none";
+
+            // Save the updated token data in localStorage
+            localStorage.setItem("tokens", tokens);
+
+            // Simulate adding tokens to the receiver's account (in real-world case, this would be done via backend API)
+            alert(`Receiver's Account: ${receiverAccount} has received ${sendAmount} token(s).`);
+        }
+
+        // Function to copy the receive address
+        function copyAddress() {
+            const receiveAddress = document.getElementById("receiveAddress").innerText;
+            const textarea = document.createElement("textarea");
+            textarea.value = receiveAddress.replace("Account Number: ", ""); // Remove the "Account Number: " prefix
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand("copy");
+            document.body.removeChild(textarea);
+            alert("Address copied to clipboard!");
+        }
+
+        // Save the settings for coins per minute, minimum tokens to transfer, and coins per token
+        function saveSettings() {
+            coinsPerMinute = parseInt(document.getElementById("coinsPerMinute").value);
+            minTokensForSend = parseInt(document.getElementById("minTokensForSend").value);
+            coinsPerToken = parseInt(document.getElementById("coinsPerToken").value);
+            
+            localStorage.setItem("coinsPerMinute", coinsPerMinute);
+            localStorage.setItem("minTokensForSend", minTokensForSend);
+            localStorage.setItem("coinsPerToken", coinsPerToken);
+
+            alert("Settings saved successfully!");
+        }
+    </script>
+</body>
+</html>
